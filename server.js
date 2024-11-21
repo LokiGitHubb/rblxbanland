@@ -1,28 +1,36 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// Initialize SQLite Database
+const db = new sqlite3.Database(path.join(__dirname, "database.sqlite"), (err) => {
+  if (err) {
+    console.error("Error opening database", err);
+  } else {
+    console.log("Connected to SQLite database");
+  }
+});
 
+// Example route to fetch all user IDs
 app.get("/users", (req, res) => {
-  const db = new sqlite3.Database("./database.sqlite");
-
   db.all("SELECT userid FROM users", [], (err, rows) => {
-    db.close();
     if (err) {
-      return res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message });
+      return;
     }
-    res.json(rows);
+    res.json({ users: rows });
   });
 });
 
-const ratelimit = require("express-rate-limit");
-
-const limiter = ratelimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per minute
+// Catch-all for undefined routes
+app.use((req, res) => {
+  res.status(404).send("404: Page not found");
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
